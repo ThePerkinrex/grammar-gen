@@ -1,4 +1,7 @@
-use std::{collections::{HashSet, HashMap}, borrow::Cow};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Symbol(usize);
@@ -27,8 +30,8 @@ pub struct Grammar {
     symbols: Vec<String>,
     tokens: Vec<String>,
     semantics: Vec<String>,
-	firsts: HashMap<Vec<GrammarSymbol>, HashSet<Option<Token>>>,
-	follows: HashMap<Symbol, HashSet<Option<Token>>>
+    firsts: HashMap<Vec<GrammarSymbol>, HashSet<Option<Token>>>,
+    follows: HashMap<Symbol, HashSet<Option<Token>>>,
 }
 
 fn add_or_get<T, U: Copy, F: FnOnce(U) -> T, C: Fn(&T, U) -> bool>(
@@ -52,8 +55,8 @@ impl Grammar {
         let mut tokens = Vec::new();
         let mut semantics = Vec::new();
         let mut rules = Vec::new();
-		let lines = lines.filter(|s| !s.is_empty()).collect::<Vec<_>>();
-		let mut rules_unparsed = Vec::with_capacity(lines.len());
+        let lines = lines.filter(|s| !s.is_empty()).collect::<Vec<_>>();
+        let mut rules_unparsed = Vec::with_capacity(lines.len());
         for line in lines {
             let Some((a, b)) = line.split_once("->") else {
                 println!("Error in line {line}, ignoring");
@@ -66,9 +69,9 @@ impl Grammar {
                 |s, a| s == a,
                 ToString::to_string,
             ));
-			rules_unparsed.push((symbol, b));
-		}
-		for (symbol, b) in rules_unparsed {
+            rules_unparsed.push((symbol, b));
+        }
+        for (symbol, b) in rules_unparsed {
             let mut initial = None;
             let mut toks = Vec::new();
             for tok_or_sem in b.split_whitespace() {
@@ -121,8 +124,8 @@ impl Grammar {
             tokens,
             rules,
             semantics,
-			firsts: HashMap::new(),
-			follows
+            firsts: HashMap::new(),
+            follows,
         }
     }
 
@@ -148,81 +151,95 @@ impl Grammar {
         }
     }
 
-	fn first(&mut self, v: &[GrammarSymbol]) -> Cow<'_, HashSet<Option<Token>>> {
-		if self.firsts.contains_key(v) {
-			return Cow::Borrowed(self.firsts.get(v).unwrap());
-		}
-		let mut f = HashSet::new();
-		f.insert(None);
-		let mut iter = v.iter();
-		while f.contains(&None) {
-			match iter.next() {
-				None => break,
-				Some(GrammarSymbol::Token(tok)) => {
-					f.remove(&None);
-					f.insert(Some(*tok));
-				}
-				Some(GrammarSymbol::Symbol(sym)) => {
-					f.remove(&None);
+    fn first(&mut self, v: &[GrammarSymbol]) -> Cow<'_, HashSet<Option<Token>>> {
+        if self.firsts.contains_key(v) {
+            return Cow::Borrowed(self.firsts.get(v).unwrap());
+        }
+        let mut f = HashSet::new();
+        f.insert(None);
+        let mut iter = v.iter();
+        while f.contains(&None) {
+            match iter.next() {
+                None => break,
+                Some(GrammarSymbol::Token(tok)) => {
+                    f.remove(&None);
+                    f.insert(Some(*tok));
+                }
+                Some(GrammarSymbol::Symbol(sym)) => {
+                    f.remove(&None);
                     #[allow(clippy::needless_collect)]
-                    for rule in self.rules.iter().filter(|r| r.symbol == *sym).map(|rule| rule.tokens.iter().map(|(x, _)| *x).collect::<Vec<_>>()).collect::<Vec<_>>() {
+                    for rule in self
+                        .rules
+                        .iter()
+                        .filter(|r| r.symbol == *sym)
+                        .map(|rule| rule.tokens.iter().map(|(x, _)| *x).collect::<Vec<_>>())
+                        .collect::<Vec<_>>()
+                    {
                         f.extend(self.first(&rule).as_ref());
                     }
-				}
-			}
-		}
-		self.firsts.insert(v.to_vec(), f.clone());
-		Cow::Owned(f)
-	}
+                }
+            }
+        }
+        self.firsts.insert(v.to_vec(), f.clone());
+        Cow::Owned(f)
+    }
 
     fn print_set(&self, set: &HashSet<Option<Token>>) {
         print!("{{");
         for x in set {
-            print!("{}, ", x.map_or("None", |x|self.get_token(x)))
+            print!("{}, ", x.map_or("None", |x| self.get_token(x)))
         }
         print!("}}");
     }
-    
-	fn follow(&mut self, v: Symbol) -> Cow<'_, HashSet<Option<Token>>> {
-		if self.follows.contains_key(&v) {
-			return Cow::Borrowed(self.follows.get(&v).unwrap());
-		}
+
+    pub fn follow(&mut self, v: Symbol) -> Cow<'_, HashSet<Option<Token>>> {
+        if self.follows.contains_key(&v) {
+            return Cow::Borrowed(self.follows.get(&v).unwrap());
+        }
         // println!();
         // print!("Follow {} ", self.get_symbol(v));
         self.follows.insert(v, HashSet::new());
-		let mut f = HashSet::new();
+        let mut f = HashSet::new();
         let mut oldset = None;
         while Some(f.clone()) != oldset {
             oldset = Some(f.clone());
-            for (sym, rule) in self.rules.iter().map(|x| (x.symbol, x.tokens.iter().map(|(x, _)| *x).collect::<Vec<_>>())).collect::<Vec<_>>() {
-            
+            for (sym, rule) in self
+                .rules
+                .iter()
+                .map(|x| {
+                    (
+                        x.symbol,
+                        x.tokens.iter().map(|(x, _)| *x).collect::<Vec<_>>(),
+                    )
+                })
+                .collect::<Vec<_>>()
+            {
                 // print!("{} -> ", self.get_symbol(sym));
                 let mut set = HashSet::<Option<Token>>::new();
                 for i in 0..rule.len() {
-    
                     // print!("{}: {}, ", self.get_grammar_symbol(rule[i]), rule[i] == GrammarSymbol::Symbol(v));
                     if rule[i] == GrammarSymbol::Symbol(v) {
-                        set.extend(self.first(&rule[i+1..]).as_ref())
+                        set.extend(self.first(&rule[i + 1..]).as_ref())
                     }
                     // self.print_set(&f);
                 }
                 // println!();
-                
+
                 if set.contains(&None) {
                     f.extend(self.follow(sym).as_ref().iter().copied());
                 }
                 f.extend(set.into_iter().flatten().map(Some));
             }
         }
-        
+
         // println!();
-		
-		self.follows.insert(v, f.clone());
-		Cow::Owned(f)
-	}
+
+        self.follows.insert(v, f.clone());
+        Cow::Owned(f)
+    }
 
     pub fn print(&mut self) {
-		println!("Grammar:");
+        println!("Grammar:");
         for (i, rule) in self.rules.iter().enumerate() {
             print!("{i:>4} {} -> ", self.get_symbol(rule.symbol));
             if let Some(sem) = rule.initial {
@@ -236,43 +253,42 @@ impl Grammar {
             }
             println!();
         }
-		println!();
-		println!("Tokens:");
-		for (i, tok) in self.tokens.iter().enumerate() {
-			println!("{i:>4} {tok}");
-		}
-		println!();
-		println!("Symbols:");
-		for (i, tok) in self.symbols.iter().enumerate() {
-			println!("{i:>4} {tok}");
-		}
-		println!();
-		println!("Semantics:");
-		for (i, tok) in self.semantics.iter().enumerate() {
-			println!("{i:>4} {tok}");
-		}
-		println!();
-		println!("Firsts:");
-		for i in 0..self.symbols.len() {
-			print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+        println!();
+        println!("Tokens:");
+        for (i, tok) in self.tokens.iter().enumerate() {
+            println!("{i:>4} {tok}");
+        }
+        println!();
+        println!("Symbols:");
+        for (i, tok) in self.symbols.iter().enumerate() {
+            println!("{i:>4} {tok}");
+        }
+        println!();
+        println!("Semantics:");
+        for (i, tok) in self.semantics.iter().enumerate() {
+            println!("{i:>4} {tok}");
+        }
+        println!();
+        println!("Firsts:");
+        for i in 0..self.symbols.len() {
+            print!("{:>4} = {{", self.get_symbol(Symbol(i)));
 
-			let first = self.first(&[GrammarSymbol::Symbol(Symbol(i))]);
-			for f in first.as_ref().clone() {
-				print!("{}, ", f.map_or("lambda", |x| self.get_token(x)))
-			}
-			println!("}}");
-		}
-		println!();
-		println!("Follows:");
-		for i in 0..self.symbols.len() {
-			print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+            let first = self.first(&[GrammarSymbol::Symbol(Symbol(i))]);
+            for f in first.as_ref().clone() {
+                print!("{}, ", f.map_or("lambda", |x| self.get_token(x)))
+            }
+            println!("}}");
+        }
+        println!();
+        println!("Follows:");
+        for i in 0..self.symbols.len() {
+            print!("{:>4} = {{", self.get_symbol(Symbol(i)));
 
-			let follow = self.follow(Symbol(i));
-			for f in follow.as_ref().clone() {
-				print!("{}, ", f.map_or("$", |x| self.get_token(x)))
-			}
-			println!("}}");
-		}
-		
+            let follow = self.follow(Symbol(i));
+            for f in follow.as_ref().clone() {
+                print!("{}, ", f.map_or("$", |x| self.get_token(x)))
+            }
+            println!("}}");
+        }
     }
 }
