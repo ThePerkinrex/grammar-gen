@@ -4,11 +4,11 @@ P -> A P
 P -> eof
 
 D -> doc D {Docs1}
-D -> lambda {DocsInit}
+D -> {DocsInit}
 
 T -> D type {DeclZoneStart} id {DeclZoneEnd} R ; {InsertTypeDocsST}
 
-R -> lambda {R.type_entry := null}
+R -> {InitR}
 R -> = {createComplexTypeST} { {DeclZoneStart} S {AssignR} } {DestroyST}
 
 S -> U , {DeclZoneStart} S1  {AssignS}
@@ -23,7 +23,7 @@ B -> C
 
 C -> D id {DeclZoneEnd} : id F
 
-F -> lambda
+F -> 
 F -> = E
 
 E -> cad

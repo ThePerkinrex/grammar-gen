@@ -5,11 +5,18 @@ use std::{
 
 use crate::grammar::{Grammar, GrammarSymbol, Rule, Semantic, Symbol, Token};
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct Item {
     rule: Rule,
     position: usize,
     ruleno: usize,
+}
+
+impl std::hash::Hash for Item {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.position.hash(state);
+        self.ruleno.hash(state);
+    }
 }
 
 impl PartialEq for Item {
