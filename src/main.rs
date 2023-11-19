@@ -1,15 +1,16 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, env::args, fs::File};
 
 use closures::{closure, Automata, Item};
+use config::Config;
 
 use crate::grammar::Grammar;
 
 mod closures;
 mod grammar;
+mod config;
 
 fn main() {
-    let mut g = Grammar::new(include_str!("test.grammar.txt").lines());
-    g.print();
-    let automata = Automata::new(&mut g);
-    automata.print(&g);
+    let config = args().nth(1).expect("A config file");
+    let config: Config = serde_json::from_reader(File::open(config).expect("Existing file")).expect("Valid json config file");
+    dbg!(config);
 }

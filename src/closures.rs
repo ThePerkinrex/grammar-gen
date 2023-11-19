@@ -76,6 +76,14 @@ impl Item {
         self.rule.tokens.get(self.position).map(|(x, _)| *x)
     }
 
+    pub fn current_gram_sym(&self) -> Option<GrammarSymbol> {
+        if self.position == 0 {
+            None
+        } else {
+            Some(self.rule.tokens[self.position - 1].0)
+        }
+    }
+
     pub fn print(&self, grammar: &Grammar) {
         print!("{} -> ", grammar.get_symbol(self.rule.symbol));
         if self.position == 0 {
@@ -175,7 +183,6 @@ pub struct AutomataState {
     shift_actions: HashMap<Token, usize>,
     reduce_actions: HashMap<Option<Token>, usize>,
     goto_actions: HashMap<Symbol, usize>,
-    semantic_action: Option<Semantic>,
 }
 
 impl AutomataState {
@@ -185,21 +192,26 @@ impl AutomataState {
             shift_actions: HashMap::new(),
             reduce_actions: HashMap::new(),
             goto_actions: HashMap::new(),
-            semantic_action: None,
         }
     }
 }
 
 pub struct Automata {
     states: HashMap<Rc<Closure>, AutomataState>,
+    state_semantics: HashMap<usize, Semantic>,
+    reduce_semantics: HashMap<usize, Semantic>,
 }
 
 impl Automata {
     pub fn new(grammar: &mut Grammar) -> Self {
         grammar.get_rules().first().cloned().map_or_else(|| Self {
-				states: HashMap::new()
+				states: HashMap::new(),
+                state_semantics: HashMap::new(),
+                reduce_semantics: HashMap::new()
 			}, |axiom| {
 			let mut states = HashMap::new();
+            let mut state_semantics = HashMap::new();
+            let mut reduce_semantics = HashMap::new();
 			let mut todo = Vec::new();
 
 			let i0 = Rc::new(closure({let mut hs = Closure::new(); hs.add(Item::new(axiom, 0)); hs}, grammar));
@@ -210,7 +222,6 @@ impl Automata {
 				let mut goto_items = HashMap::<_, Vec<_>>::new();
 				let mut shift_items = HashMap::<_, Vec<_>>::new();
 				let mut reduce_items = HashMap::<_, _>::new();
-				let mut sem_action = None;
 				for item in next_state.ref_iter() {
 					match item.next_gram_sym() {
 						None => {
@@ -228,18 +239,27 @@ impl Automata {
 						}
 					}
 					if let Some(x) = item.current_sem() {
-						if let Some(other) = sem_action {
-							eprintln!("Multiple semantic actions ({} and {}) @ state {} with closure:", grammar.get_semantic(x), grammar.get_semantic(other), states.get(&next_state).unwrap().state);
-							for item in next_state.ref_iter() {
-								item.eprint(grammar);
-							}
-						}else{
-							sem_action = Some(x);
-						}
+                        if item.next_gram_sym().is_none() {
+                            if let Some(other) = reduce_semantics.insert(item.ruleno, x) {
+                                if x != other {
+                                    eprintln!("Duplicate error: reduce semantic for rule {} can be more than one thing, either {} or {}", item.ruleno, grammar.get_semantic(x), grammar.get_semantic(other));
+                                }
+                            }
+                        }else{
+                            let state = states.get_mut(&next_state).unwrap().state;
+                            if let Some(GrammarSymbol::Symbol(s)) = item.current_gram_sym() {
+                                eprintln!("Semantic after non terminal symbol: {} @ state i{state} with prev symbol {}", grammar.get_semantic(x), grammar.get_symbol(s));
+                            }
+                            if let Some(other) = state_semantics.insert(state, x) {
+                                if x != other {
+                                    eprintln!("Duplicate error: state semantic for state {} can be more than one thing, either {} or {}", state, grammar.get_semantic(x), grammar.get_semantic(other));
+                                }
+                            }
+                        }
 					}
 				}
 
-				states.get_mut(&next_state).unwrap().semantic_action = sem_action;
+				// states.get_mut(&next_state).unwrap().semantic_action = sem_action;
 
 				for (s, items) in goto_items {
 					let mut c = Closure::new();
@@ -276,7 +296,7 @@ impl Automata {
 
 			}
 
-			Self {states}
+			Self {states, state_semantics, reduce_semantics}
 		})
     }
 
@@ -303,9 +323,16 @@ impl Automata {
             for (t, rule) in &state.reduce_actions {
                 println!("{} -> Rule {rule}", t.map_or("$", |t| grammar.get_token(t)));
             }
-            if let Some(sem) = &state.semantic_action {
-                println!("SEMANTIC: {}", grammar.get_semantic(*sem));
-            }
+        }
+        println!();
+        println!("STATE SEMANTICS");
+        for (state, sem) in self.state_semantics.iter() {
+            println!("Enter state i{state}: {}", grammar.get_semantic(*sem));
+        }
+        println!();
+        println!("REDUCE SEMANTICS");
+        for (state, sem) in self.reduce_semantics.iter() {
+            println!("Reduce rule {state}: {}", grammar.get_semantic(*sem));
         }
     }
 }
