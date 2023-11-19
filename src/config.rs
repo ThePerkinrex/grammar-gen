@@ -18,6 +18,18 @@ impl TemplateSource {
 	}
 }
 
+#[derive(Debug, serde::Deserialize)]
+#[serde(untagged, rename_all = "lowercase")]
+pub enum SemanticTemplateSource {
+	Switch {
+		case: TemplateSource,
+		body: TemplateSource
+	},
+	Line {
+		line: TemplateSource
+	}
+}
+
 #[derive(Debug, serde::Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum PrintOption {
