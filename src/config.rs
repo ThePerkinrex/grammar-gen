@@ -46,4 +46,5 @@ pub struct Config {
 pub struct SemanticsConfig {
 	pub reduceTemplate: TemplateSource,
 	pub stateTemplate: TemplateSource,
+	pub replacements: HashMap<String,String>
 }

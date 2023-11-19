@@ -29,12 +29,14 @@ pub struct GotoContext<'a> {
 pub struct SemStateContext<'a> {
 	pub state: usize,
 	pub semantic: Semantic,
-	pub semanticName: &'a str
+	pub semanticName: &'a str,
+	pub semanticBody: &'a str
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct SemReduceContext<'a> {
 	pub ruleno: usize,
 	pub semantic: Semantic,
-	pub semanticName: &'a str
+	pub semanticName: &'a str,
+	pub semanticBody: &'a str
 }

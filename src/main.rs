@@ -40,7 +40,8 @@ fn main() {
     let config_path = PathBuf::from(args().nth(1).expect("A config file"));
     let config: Config = serde_json::from_reader(File::open(&config_path).expect("Existing file"))
         .expect("Valid json config file");
-    let grammar_path = config_path.parent().unwrap().join(config.grammar);
+    let config_parent = config_path.parent().unwrap();
+    let grammar_path = config_parent.join(config.grammar);
 
     let mut grammar = Grammar::new(
         BufReader::new(File::open(grammar_path).expect("A grammar file"))
@@ -77,7 +78,7 @@ fn main() {
 
     for (path, rules) in config.results {
         let sinkno = sinks.len();
-        sinks.push(File::create(path).expect("valid path"));
+        sinks.push(File::create(config_parent.join(path)).expect("valid path"));
         if rules.contains(&config::PrintOption::Shift) {
             shift_sinks.push(sinkno);
         }
@@ -151,13 +152,15 @@ fn main() {
     }
 
     for (state, sem) in automata.iter_state_sem() {
+        let semanticName = grammar.get_semantic(sem);
         let formatted = tt
                 .render(
                     "semantic/state",
                     &SemStateContext {
                         state,
                         semantic: sem,
-                        semanticName: grammar.get_semantic(sem)
+                        semanticName,
+                        semanticBody: config.semantics.replacements.get(semanticName).map(AsRef::as_ref).unwrap_or_default()
                     },
                 )
                 .expect("Ability to format semantic state");
@@ -167,13 +170,15 @@ fn main() {
     }
 
     for (ruleno, sem) in automata.iter_reduce_sem() {
+        let semanticName = grammar.get_semantic(sem);
         let formatted = tt
                 .render(
                     "semantic/reduce",
                     &SemReduceContext {
                         ruleno,
                         semantic: sem,
-                        semanticName: grammar.get_semantic(sem)
+                        semanticName,
+                        semanticBody: config.semantics.replacements.get(semanticName).map(AsRef::as_ref).unwrap_or_default()
                     },
                 )
                 .expect("Ability to format semantic reduce");
