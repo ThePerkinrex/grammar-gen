@@ -179,10 +179,10 @@ pub fn closure(mut items: Closure, grammar: &Grammar) -> Closure {
 }
 
 pub struct AutomataState {
-    state: usize,
-    shift_actions: HashMap<Token, usize>,
-    reduce_actions: HashMap<Option<Token>, usize>,
-    goto_actions: HashMap<Symbol, usize>,
+    pub state: usize,
+    pub shift_actions: HashMap<Token, usize>,
+    pub reduce_actions: HashMap<Option<Token>, usize>,
+    pub goto_actions: HashMap<Symbol, usize>,
 }
 
 impl AutomataState {
@@ -334,5 +334,17 @@ impl Automata {
         for (state, sem) in self.reduce_semantics.iter() {
             println!("Reduce rule {state}: {}", grammar.get_semantic(*sem));
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &AutomataState> {
+        self.states.values()
+    }
+
+    pub fn iter_state_sem(&self) -> impl Iterator<Item = (usize, Semantic)> + '_ {
+        self.state_semantics.iter().map(|(&a, &b)| (a,b))
+    }
+
+    pub fn iter_reduce_sem(&self) -> impl Iterator<Item = (usize, Semantic)> + '_ {
+        self.reduce_semantics.iter().map(|(&a, &b)| (a,b))
     }
 }

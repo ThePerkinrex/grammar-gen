@@ -3,7 +3,8 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[serde(transparent)]
 pub struct Symbol(usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Token(usize);
@@ -14,7 +15,8 @@ pub enum GrammarSymbol {
     Symbol(Symbol),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[serde(transparent)]
 pub struct Semantic(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -50,7 +52,7 @@ fn add_or_get<T, U: Copy, F: FnOnce(U) -> T, C: Fn(&T, U) -> bool>(
 }
 
 impl Grammar {
-    pub fn new<'a, I: Iterator<Item = &'a str>>(lines: I) -> Self {
+    pub fn new<'a, I: Iterator<Item = Cow<'a, str>>>(lines: I) -> Self {
         let mut symbols = Vec::new();
         let mut tokens = Vec::new();
         let mut semantics = Vec::new();
@@ -69,7 +71,7 @@ impl Grammar {
                 |s, a| s == a,
                 ToString::to_string,
             ));
-            rules_unparsed.push((symbol, b));
+            rules_unparsed.push((symbol, b.to_string()));
         }
         for (symbol, b) in rules_unparsed {
             let mut initial = None;
