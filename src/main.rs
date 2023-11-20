@@ -4,11 +4,11 @@ use std::{
     env::args,
     fs::File,
     io::{BufRead, BufReader, Write},
-    path::PathBuf,
+    path::PathBuf, fmt::Display,
 };
 
 use closures::{closure, Automata, Item};
-use config::Config;
+use config::{Config, SemanticTemplateSource};
 use context::{ReduceContext, ShiftContext, GotoContext, SemStateContext, SemReduceContext};
 use grammar::Token;
 use tinytemplate::TinyTemplate;
