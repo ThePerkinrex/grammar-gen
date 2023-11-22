@@ -27,6 +27,7 @@ impl PartialEq for Item {
 
 impl Eq for Item {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for Item {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match self.ruleno.partial_cmp(&other.ruleno) {
@@ -98,19 +99,19 @@ impl Item {
         println!();
     }
 
-    pub fn eprint(&self, grammar: &Grammar) {
-        eprint!("{} -> ", grammar.get_symbol(self.rule.symbol));
-        if self.position == 0 {
-            eprint!("· ");
-        }
-        for (i, (e, _)) in self.rule.tokens.iter().enumerate() {
-            eprint!("{} ", grammar.get_grammar_symbol(*e));
-            if (i + 1) == self.position {
-                eprint!("· ");
-            }
-        }
-        eprintln!();
-    }
+    // pub fn eprint(&self, grammar: &Grammar) {
+    //     eprint!("{} -> ", grammar.get_symbol(self.rule.symbol));
+    //     if self.position == 0 {
+    //         eprint!("· ");
+    //     }
+    //     for (i, (e, _)) in self.rule.tokens.iter().enumerate() {
+    //         eprint!("{} ", grammar.get_grammar_symbol(*e));
+    //         if (i + 1) == self.position {
+    //             eprint!("· ");
+    //         }
+    //     }
+    //     eprintln!();
+    // }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -164,7 +165,7 @@ pub fn closure(mut items: Closure, grammar: &Grammar) -> Closure {
             if let Some(GrammarSymbol::Symbol(sym)) = item.next_gram_sym() {
                 for (i, rule) in grammar
                     .get_rules()
-                    .into_iter()
+                    .iter()
                     .enumerate()
                     .filter(|(_, x)| x.symbol == sym)
                 {
@@ -341,10 +342,10 @@ impl Automata {
     }
 
     pub fn iter_state_sem(&self) -> impl Iterator<Item = (usize, Semantic)> + '_ {
-        self.state_semantics.iter().map(|(&a, &b)| (a,b))
+        self.state_semantics.iter().map(|(&a, &b)| (a, b))
     }
 
     pub fn iter_reduce_sem(&self) -> impl Iterator<Item = (usize, Semantic)> + '_ {
-        self.reduce_semantics.iter().map(|(&a, &b)| (a,b))
+        self.reduce_semantics.iter().map(|(&a, &b)| (a, b))
     }
 }

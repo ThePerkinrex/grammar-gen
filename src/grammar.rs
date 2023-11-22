@@ -186,13 +186,13 @@ impl Grammar {
         Cow::Owned(f)
     }
 
-    fn print_set(&self, set: &HashSet<Option<Token>>) {
-        print!("{{");
-        for x in set {
-            print!("{}, ", x.map_or("None", |x| self.get_token(x)))
-        }
-        print!("}}");
-    }
+    // fn print_set(&self, set: &HashSet<Option<Token>>) {
+    //     print!("{{");
+    //     for x in set {
+    //         print!("{}, ", x.map_or("None", |x| self.get_token(x)))
+    //     }
+    //     print!("}}");
+    // }
 
     pub fn follow(&mut self, v: Symbol) -> Cow<'_, HashSet<Option<Token>>> {
         if self.follows.contains_key(&v) {
@@ -203,8 +203,10 @@ impl Grammar {
         self.follows.insert(v, HashSet::new());
         let mut f = HashSet::new();
         let mut oldset = None;
+
         while Some(f.clone()) != oldset {
             oldset = Some(f.clone());
+            #[allow(clippy::needless_collect)]
             for (sym, rule) in self
                 .rules
                 .iter()
@@ -240,57 +242,57 @@ impl Grammar {
         Cow::Owned(f)
     }
 
-    pub fn print(&mut self) {
-        println!("Grammar:");
-        for (i, rule) in self.rules.iter().enumerate() {
-            print!("{i:>4} {} -> ", self.get_symbol(rule.symbol));
-            if let Some(sem) = rule.initial {
-                print!("{{{}}} ", self.get_semantic(sem));
-            }
-            for (tok, sem) in &rule.tokens {
-                print!("{} ", self.get_grammar_symbol(*tok));
-                if let Some(sem) = sem {
-                    print!("{{{}}} ", self.get_semantic(*sem));
-                }
-            }
-            println!();
-        }
-        println!();
-        println!("Tokens:");
-        for (i, tok) in self.tokens.iter().enumerate() {
-            println!("{i:>4} {tok}");
-        }
-        println!();
-        println!("Symbols:");
-        for (i, tok) in self.symbols.iter().enumerate() {
-            println!("{i:>4} {tok}");
-        }
-        println!();
-        println!("Semantics:");
-        for (i, tok) in self.semantics.iter().enumerate() {
-            println!("{i:>4} {tok}");
-        }
-        println!();
-        println!("Firsts:");
-        for i in 0..self.symbols.len() {
-            print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+    // pub fn print(&mut self) {
+    //     println!("Grammar:");
+    //     for (i, rule) in self.rules.iter().enumerate() {
+    //         print!("{i:>4} {} -> ", self.get_symbol(rule.symbol));
+    //         if let Some(sem) = rule.initial {
+    //             print!("{{{}}} ", self.get_semantic(sem));
+    //         }
+    //         for (tok, sem) in &rule.tokens {
+    //             print!("{} ", self.get_grammar_symbol(*tok));
+    //             if let Some(sem) = sem {
+    //                 print!("{{{}}} ", self.get_semantic(*sem));
+    //             }
+    //         }
+    //         println!();
+    //     }
+    //     println!();
+    //     println!("Tokens:");
+    //     for (i, tok) in self.tokens.iter().enumerate() {
+    //         println!("{i:>4} {tok}");
+    //     }
+    //     println!();
+    //     println!("Symbols:");
+    //     for (i, tok) in self.symbols.iter().enumerate() {
+    //         println!("{i:>4} {tok}");
+    //     }
+    //     println!();
+    //     println!("Semantics:");
+    //     for (i, tok) in self.semantics.iter().enumerate() {
+    //         println!("{i:>4} {tok}");
+    //     }
+    //     println!();
+    //     println!("Firsts:");
+    //     for i in 0..self.symbols.len() {
+    //         print!("{:>4} = {{", self.get_symbol(Symbol(i)));
 
-            let first = self.first(&[GrammarSymbol::Symbol(Symbol(i))]);
-            for f in first.as_ref().clone() {
-                print!("{}, ", f.map_or("lambda", |x| self.get_token(x)))
-            }
-            println!("}}");
-        }
-        println!();
-        println!("Follows:");
-        for i in 0..self.symbols.len() {
-            print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+    //         let first = self.first(&[GrammarSymbol::Symbol(Symbol(i))]);
+    //         for f in first.as_ref().clone() {
+    //             print!("{}, ", f.map_or("lambda", |x| self.get_token(x)))
+    //         }
+    //         println!("}}");
+    //     }
+    //     println!();
+    //     println!("Follows:");
+    //     for i in 0..self.symbols.len() {
+    //         print!("{:>4} = {{", self.get_symbol(Symbol(i)));
 
-            let follow = self.follow(Symbol(i));
-            for f in follow.as_ref().clone() {
-                print!("{}, ", f.map_or("$", |x| self.get_token(x)))
-            }
-            println!("}}");
-        }
-    }
+    //         let follow = self.follow(Symbol(i));
+    //         for f in follow.as_ref().clone() {
+    //             print!("{}, ", f.map_or("$", |x| self.get_token(x)))
+    //         }
+    //         println!("}}");
+    //     }
+    // }
 }
