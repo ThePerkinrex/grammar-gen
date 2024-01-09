@@ -95,6 +95,22 @@ impl Item {
         println!();
     }
 
+    pub fn to_string(&self, grammar: &Grammar) -> String {
+        use std::fmt::Write;
+        let mut string = String::new();
+        write!(string, "{} -> ", grammar.get_symbol(self.rule.symbol)).unwrap();
+        if self.position == 0 {
+            write!(string, "· ").unwrap();
+        }
+        for (i, e) in self.rule.tokens.iter().enumerate() {
+            write!(string, "{} ", grammar.get_grammar_symbol(*e)).unwrap();
+            if (i + 1) == self.position {
+                write!(string, "· ").unwrap();
+            }
+        }
+        string
+    }
+
     // pub fn eprint(&self, grammar: &Grammar) {
     //     eprint!("{} -> ", grammar.get_symbol(self.rule.symbol));
     //     if self.position == 0 {
@@ -332,6 +348,10 @@ impl Automata {
         for (state, sem) in self.reduce_semantics.iter() {
             println!("Reduce rule {state}: {}", grammar.get_semantic(*sem));
         }
+    }
+
+    pub fn iter_all(&self) -> impl Iterator<Item = (&Rc<Closure>, &AutomataState)> {
+        self.states.iter()
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &AutomataState> {

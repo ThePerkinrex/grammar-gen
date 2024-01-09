@@ -1,6 +1,7 @@
 use std::{
     borrow::Cow,
-    collections::{HashMap, HashSet}, process::exit,
+    collections::{HashMap, HashSet},
+    process::exit,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
@@ -24,7 +25,7 @@ pub struct Rule {
     pub symbol: Symbol,
     pub tokens: Vec<GrammarSymbol>,
     pub semantics: Vec<Option<Semantic>>,
-    pub reduce_sem: Option<Semantic>
+    pub reduce_sem: Option<Semantic>,
 }
 
 #[derive(Debug)]
@@ -130,7 +131,7 @@ impl Grammar {
                 symbol,
                 tokens: toks,
                 semantics: sems,
-                reduce_sem
+                reduce_sem,
             };
             rules.push(rule);
         }
@@ -227,12 +228,7 @@ impl Grammar {
             for (sym, rule) in self
                 .rules
                 .iter()
-                .map(|x| {
-                    (
-                        x.symbol,
-                        x.tokens.to_vec(),
-                    )
-                })
+                .map(|x| (x.symbol, x.tokens.to_vec()))
                 .collect::<Vec<_>>()
             {
                 // print!("{} -> ", self.get_symbol(sym));
@@ -259,45 +255,63 @@ impl Grammar {
         Cow::Owned(f)
     }
 
-    // pub fn print(&mut self) {
-    //     println!("Grammar:");
-    //     for (i, rule) in self.rules.iter().enumerate() {
-    //         print!("{i:>4} {} -> ", self.get_symbol(rule.symbol));
-    //         let mut sems = rule.semantics.iter();
-    //         let mut toks = rule.tokens.iter();
-    //         while let (Some(sem), Some(tok)) = (sems.next(), toks.next()) {
-    //             if let Some(sem) = sem {
-    //                 print!("{{{}}} ", self.get_semantic(*sem))
-    //             }
-    //             print!("{} ", self.get_grammar_symbol(*tok))
-    //         }
-    //         if let Some(Some(last_sem)) = sems.next() {
-    //             print!("{{{}}} ", self.get_semantic(*last_sem))
-    //         }
-    //         if let Some(red) = rule.reduce_sem {
-    //             print!("R{{{}}}", self.get_semantic(red))
-    //         }
-    //         println!();
-    //     }
-    //     println!();
-    //     println!("Tokens:");
-    //     for (i, tok) in self.tokens.iter().enumerate() {
-    //         println!("{i:>4} {tok}");
-    //     }
-    //     println!();
-    //     println!("Symbols:");
-    //     for (i, tok) in self.symbols.iter().enumerate() {
-    //         println!("{i:>4} {tok}");
-    //     }
-    //     println!();
-    //     println!("Semantics:");
-    //     for (i, tok) in self.semantics.iter().enumerate() {
-    //         println!("{i:>4} {tok}");
-    //     }
-    //     println!();
-    //     println!("Firsts:");
-    //     for i in 0..self.symbols.len() {
-    //         print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+    pub fn print(&mut self) {
+        println!("Grammar:");
+        for (i, rule) in self.rules.iter().enumerate() {
+            print!("{i:>4} {} -> ", self.get_symbol(rule.symbol));
+            let mut sems = rule.semantics.iter();
+            let mut toks = rule.tokens.iter();
+            while let (Some(sem), Some(tok)) = (sems.next(), toks.next()) {
+                if let Some(sem) = sem {
+                    print!("{{{}}} ", self.get_semantic(*sem))
+                }
+                print!("{} ", self.get_grammar_symbol(*tok))
+            }
+            if let Some(Some(last_sem)) = sems.next() {
+                print!("{{{}}} ", self.get_semantic(*last_sem))
+            }
+            if let Some(red) = rule.reduce_sem {
+                print!("R{{{}}}", self.get_semantic(red))
+            }
+            println!();
+        }
+        println!();
+        println!("Tokens:");
+        for (i, tok) in self.tokens.iter().enumerate() {
+            println!("{i:>4} {tok}");
+        }
+        println!();
+        println!("Symbols:");
+        for (i, tok) in self.symbols.iter().enumerate() {
+            println!("{i:>4} {tok}");
+        }
+        println!();
+        println!("Semantics:");
+        for (i, tok) in self.semantics.iter().enumerate() {
+            println!("{i:>4} {tok}");
+        }
+        println!();
+        println!("Firsts:");
+        for i in 0..self.symbols.len() {
+            print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+            let first = self.first(&[GrammarSymbol::Symbol(Symbol(i))]);
+            for f in first.as_ref().clone() {
+                print!("{}, ", f.map_or("lambda", |x| self.get_token(x)))
+            }
+            println!("}}");
+        }
+        println!();
+        println!("Follows:");
+        for i in 0..self.symbols.len() {
+            print!("{:>4} = {{", self.get_symbol(Symbol(i)));
+
+            let follow = self.follow(Symbol(i));
+            for f in follow.as_ref().clone() {
+                print!("{}, ", f.map_or("$", |x| self.get_token(x)))
+            }
+            println!("}}");
+        }
+    }
     // pub fn print(&mut self) {
     //     println!("Grammar:");
     //     for (i, rule) in self.rules.iter().enumerate() {

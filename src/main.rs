@@ -5,7 +5,7 @@ use std::{
     fmt::Display,
     fs::File,
     io::{BufRead, BufReader, Write},
-    path::PathBuf,
+    path::PathBuf, char::DecodeUtf16,
 };
 
 use closures::Automata;
@@ -131,6 +131,7 @@ fn main() {
             .flatten()
             .map(Cow::Owned),
     );
+    grammar.print();
     let automata = Automata::new(&mut grammar);
     automata.print(&grammar);
     let arena = Arena::new();
@@ -164,6 +165,7 @@ fn main() {
     let mut goto_sinks = Vec::new();
     let mut sem_state_sinks = Vec::new();
     let mut sem_reduce_sinks = Vec::new();
+    let mut dot_sinks = Vec::new();
 
     for (path, rules) in config.results {
         let sinkno = sinks.len();
@@ -183,6 +185,21 @@ fn main() {
         if rules.contains(&config::PrintOption::ReduceSemantics) {
             sem_reduce_sinks.push(sinkno);
         }
+        if rules.contains(&config::PrintOption::Dot) {
+            dot_sinks.push(sinkno);
+        }
+    }
+
+    for sink in &dot_sinks {
+        writeln!(sinks[*sink], "digraph automata {{").unwrap();
+    }
+    let mut states = automata.iter_all().collect::<Vec<_>>();
+    states.sort_by_key(|(_, s)| s.state);
+    for (closure, state) in states {
+        let string = closure.ref_iter().map(|item|item.to_string(&grammar)).collect::<Vec<_>>().join("\\n\t");
+        for sink in &dot_sinks {
+            writeln!(sinks[*sink], "\ti{} [label=\"i{0}\\n\t{}\"];", state.state, string).unwrap();
+        }
     }
 
     for state in automata.iter() {
@@ -199,6 +216,9 @@ fn main() {
                 .expect("Ability to format shift");
             for sink in &shift_sinks {
                 writeln!(sinks[*sink], "{formatted}").unwrap();
+            }
+            for sink in &dot_sinks {
+                writeln!(sinks[*sink], "\ti{} -> i{} [label=\"{}\"];", state.state, next, grammar.get_token(token)).unwrap();
             }
         }
         for (&token, &ruleno) in state.reduce_actions.iter() {
@@ -236,6 +256,10 @@ fn main() {
                 .expect("Ability to format goto");
             for sink in &goto_sinks {
                 writeln!(sinks[*sink], "{formatted}").unwrap();
+            }
+
+            for sink in &dot_sinks {
+                writeln!(sinks[*sink], "\ti{} -> i{} [label=\"{}\"];", state.state, next, grammar.get_symbol(symbol)).unwrap();
             }
         }
     }
@@ -350,5 +374,10 @@ fn main() {
         // for sink in &sem_reduce_sinks {
         //     writeln!(sinks[*sink], "{formatted}").unwrap();
         // }
+
+    }
+    
+    for sink in &dot_sinks {
+        writeln!(sinks[*sink], "}}").unwrap();
     }
 }
