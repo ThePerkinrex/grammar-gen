@@ -57,11 +57,7 @@ impl Item {
     }
 
     pub fn current_sem(&self) -> Option<Semantic> {
-        if self.position == 0 {
-            self.rule.initial
-        } else {
-            self.rule.tokens[self.position - 1].1
-        }
+        self.rule.semantics.get(self.position).copied().flatten()
     }
 
     pub fn advance(&self) -> Self {
@@ -73,14 +69,14 @@ impl Item {
     }
 
     pub fn next_gram_sym(&self) -> Option<GrammarSymbol> {
-        self.rule.tokens.get(self.position).map(|(x, _)| *x)
+        self.rule.tokens.get(self.position).copied()
     }
 
     pub fn current_gram_sym(&self) -> Option<GrammarSymbol> {
         if self.position == 0 {
             None
         } else {
-            Some(self.rule.tokens[self.position - 1].0)
+            Some(self.rule.tokens[self.position - 1])
         }
     }
 
@@ -89,7 +85,7 @@ impl Item {
         if self.position == 0 {
             print!("· ");
         }
-        for (i, (e, _)) in self.rule.tokens.iter().enumerate() {
+        for (i, e) in self.rule.tokens.iter().enumerate() {
             print!("{} ", grammar.get_grammar_symbol(*e));
             if (i + 1) == self.position {
                 print!("· ");
@@ -103,7 +99,7 @@ impl Item {
         if self.position == 0 {
             eprint!("· ");
         }
-        for (i, (e, _)) in self.rule.tokens.iter().enumerate() {
+        for (i, e) in self.rule.tokens.iter().enumerate() {
             eprint!("{} ", grammar.get_grammar_symbol(*e));
             if (i + 1) == self.position {
                 eprint!("· ");
@@ -238,25 +234,26 @@ impl Automata {
 							shift_items.entry(t).or_default().push(item.advance())
 						}
 					}
-					if let Some(x) = item.current_sem() {
-                        if item.next_gram_sym().is_none() {
+                    if item.next_gram_sym().is_none() {
+                        if let Some(x) = item.rule.reduce_sem {
                             if let Some(other) = reduce_semantics.insert(item.ruleno, x) {
                                 if x != other {
                                     eprintln!("Duplicate error: reduce semantic for rule {} can be more than one thing, either {} or {}", item.ruleno, grammar.get_semantic(x), grammar.get_semantic(other));
                                 }
                             }
-                        }else{
-                            let state = states.get_mut(&next_state).unwrap().state;
-                            if let Some(GrammarSymbol::Symbol(s)) = item.current_gram_sym() {
-                                eprintln!("Semantic after non terminal symbol: {} @ state i{state} with prev symbol {}", grammar.get_semantic(x), grammar.get_symbol(s));
-                            }
-                            if let Some(other) = state_semantics.insert(state, x) {
-                                if x != other {
-                                    eprintln!("Duplicate error: state semantic for state {} can be more than one thing, either {} or {}", state, grammar.get_semantic(x), grammar.get_semantic(other));
-                                }
+                        }
+                    }else if let Some(x) = item.current_sem() {
+                        let state = states.get_mut(&next_state).unwrap().state;
+                        if let Some(GrammarSymbol::Symbol(s)) = item.current_gram_sym() {
+                            eprintln!("Semantic after non terminal symbol: {} @ state i{state} with prev symbol {}", grammar.get_semantic(x), grammar.get_symbol(s));
+                        }
+                        if let Some(other) = state_semantics.insert(state, x) {
+                            if x != other {
+                                eprintln!("Duplicate error: state semantic for state {} can be more than one thing, either {} or {}", state, grammar.get_semantic(x), grammar.get_semantic(other));
                             }
                         }
-					}
+                    }
+					
 				}
 
 				// states.get_mut(&next_state).unwrap().semantic_action = sem_action;

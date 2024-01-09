@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet}, process::exit,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
@@ -22,8 +22,9 @@ pub struct Semantic(usize);
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Rule {
     pub symbol: Symbol,
-    pub tokens: Vec<(GrammarSymbol, Option<Semantic>)>,
-    pub initial: Option<Semantic>,
+    pub tokens: Vec<GrammarSymbol>,
+    pub semantics: Vec<Option<Semantic>>,
+    pub reduce_sem: Option<Semantic>
 }
 
 #[derive(Debug)]
@@ -74,8 +75,10 @@ impl Grammar {
             rules_unparsed.push((symbol, b.to_string()));
         }
         for (symbol, b) in rules_unparsed {
-            let mut initial = None;
             let mut toks = Vec::new();
+            let mut reduce_sem = None;
+            let mut sems = Vec::new();
+            let mut last_sem = false;
             for tok_or_sem in b.split_whitespace() {
                 if tok_or_sem.starts_with('{') && tok_or_sem.ends_with('}') {
                     let sem = &tok_or_sem[1..tok_or_sem.len() - 1];
@@ -85,11 +88,20 @@ impl Grammar {
                         |s, a| s == a,
                         ToString::to_string,
                     )));
-                    if let Some((_, s)) = toks.last_mut() {
-                        *s = sem;
-                    } else {
-                        initial = sem;
+                    if last_sem {
+                        println!("Error, duplicate semantics");
+                        exit(1);
                     }
+                    sems.push(sem);
+                } else if tok_or_sem.starts_with("R{") && tok_or_sem.ends_with('}') {
+                    let sem = &tok_or_sem[2..tok_or_sem.len() - 1];
+                    let sem = Some(Semantic(add_or_get(
+                        &mut semantics,
+                        sem,
+                        |s, a| s == a,
+                        ToString::to_string,
+                    )));
+                    reduce_sem = sem;
                 } else {
                     let tok = symbols
                         .iter()
@@ -106,14 +118,19 @@ impl Grammar {
                             },
                             |(i, _)| GrammarSymbol::Symbol(Symbol(i)),
                         );
-                    toks.push((tok, None))
+                    toks.push(tok);
+                    if !last_sem {
+                        sems.push(None);
+                    }
+                    last_sem = false;
                 }
             }
 
             let rule = Rule {
-                initial,
                 symbol,
                 tokens: toks,
+                semantics: sems,
+                reduce_sem
             };
             rules.push(rule);
         }
@@ -174,7 +191,7 @@ impl Grammar {
                         .rules
                         .iter()
                         .filter(|r| r.symbol == *sym)
-                        .map(|rule| rule.tokens.iter().map(|(x, _)| *x).collect::<Vec<_>>())
+                        .map(|rule| rule.tokens.to_vec())
                         .collect::<Vec<_>>()
                     {
                         f.extend(self.first(&rule).as_ref());
@@ -211,7 +228,7 @@ impl Grammar {
                 .map(|x| {
                     (
                         x.symbol,
-                        x.tokens.iter().map(|(x, _)| *x).collect::<Vec<_>>(),
+                        x.tokens.to_vec(),
                     )
                 })
                 .collect::<Vec<_>>()
@@ -244,14 +261,19 @@ impl Grammar {
         println!("Grammar:");
         for (i, rule) in self.rules.iter().enumerate() {
             print!("{i:>4} {} -> ", self.get_symbol(rule.symbol));
-            if let Some(sem) = rule.initial {
-                print!("{{{}}} ", self.get_semantic(sem));
-            }
-            for (tok, sem) in &rule.tokens {
-                print!("{} ", self.get_grammar_symbol(*tok));
+            let mut sems = rule.semantics.iter();
+            let mut toks = rule.tokens.iter();
+            while let (Some(sem), Some(tok)) = (sems.next(), toks.next()) {
                 if let Some(sem) = sem {
-                    print!("{{{}}} ", self.get_semantic(*sem));
+                    print!("{{{}}} ", self.get_semantic(*sem))
                 }
+                print!("{} ", self.get_grammar_symbol(*tok))
+            }
+            if let Some(Some(last_sem)) = sems.next() {
+                print!("{{{}}} ", self.get_semantic(*last_sem))
+            }
+            if let Some(red) = rule.reduce_sem {
+                print!("R{{{}}}", self.get_semantic(red))
             }
             println!();
         }
