@@ -41,7 +41,7 @@ pub enum PrintOption {
     StateSemantics,
     #[serde(rename = "semantics/reduce")]
     ReduceSemantics,
-	Dot
+    Dot,
 }
 
 #[derive(Debug, serde::Deserialize)]

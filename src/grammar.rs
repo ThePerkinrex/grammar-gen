@@ -94,6 +94,7 @@ impl Grammar {
                         exit(1);
                     }
                     sems.push(sem);
+                    last_sem = true;
                 } else if tok_or_sem.starts_with("R{") && tok_or_sem.ends_with('}') {
                     let sem = &tok_or_sem[2..tok_or_sem.len() - 1];
                     let sem = Some(Semantic(add_or_get(
@@ -139,14 +140,16 @@ impl Grammar {
         hs.insert(None);
         let mut follows = HashMap::with_capacity(1);
         follows.insert(rules[0].symbol, hs);
-        Self {
+        let mut s = Self {
             symbols,
             tokens,
             rules,
             semantics,
             firsts: HashMap::new(),
             follows,
-        }
+        };
+        s.follows();
+        s
     }
 
     pub fn get_rules(&self) -> &[Rule] {
@@ -204,6 +207,35 @@ impl Grammar {
         Cow::Owned(f)
     }
 
+    fn first_non_mut(&self, v: &[GrammarSymbol]) -> HashSet<Option<Token>> {
+        let mut f = HashSet::new();
+        f.insert(None);
+        let mut iter = v.iter();
+        while f.contains(&None) {
+            match iter.next() {
+                None => break,
+                Some(GrammarSymbol::Token(tok)) => {
+                    f.remove(&None);
+                    f.insert(Some(*tok));
+                }
+                Some(GrammarSymbol::Symbol(sym)) => {
+                    f.remove(&None);
+                    #[allow(clippy::needless_collect)]
+                    for rule in self
+                        .rules
+                        .iter()
+                        .filter(|r| r.symbol == *sym)
+                        .map(|rule| rule.tokens.to_vec())
+                        .collect::<Vec<_>>()
+                    {
+                        f.extend(self.first_non_mut(&rule));
+                    }
+                }
+            }
+        }
+        f
+    }
+
     // fn print_set(&self, set: &HashSet<Option<Token>>) {
     //     print!("{{");
     //     for x in set {
@@ -216,43 +248,73 @@ impl Grammar {
         if self.follows.contains_key(&v) {
             return Cow::Borrowed(self.follows.get(&v).unwrap());
         }
+        unreachable!()
         // println!();
         // print!("Follow {} ", self.get_symbol(v));
-        self.follows.insert(v, HashSet::new());
-        let mut f = HashSet::new();
-        let mut oldset = None;
+        // self.follows.insert(v, HashSet::new());
+        // let mut f = HashSet::new();
+        // let mut oldset = None;
 
-        while Some(f.clone()) != oldset {
-            oldset = Some(f.clone());
-            #[allow(clippy::needless_collect)]
-            for (sym, rule) in self
-                .rules
-                .iter()
-                .map(|x| (x.symbol, x.tokens.to_vec()))
-                .collect::<Vec<_>>()
-            {
-                // print!("{} -> ", self.get_symbol(sym));
-                let mut set = HashSet::<Option<Token>>::new();
-                for i in 0..rule.len() {
-                    // print!("{}: {}, ", self.get_grammar_symbol(rule[i]), rule[i] == GrammarSymbol::Symbol(v));
-                    if rule[i] == GrammarSymbol::Symbol(v) {
-                        set.extend(self.first(&rule[i + 1..]).as_ref())
-                    }
-                    // self.print_set(&f);
-                }
-                // println!();
+        // while Some(f.clone()) != oldset {
+        //     oldset = Some(f.clone());
+        //     #[allow(clippy::needless_collect)]
+        //     for (sym, rule) in self
+        //         .rules
+        //         .iter()
+        //         .map(|x| (x.symbol, x.tokens.to_vec()))
+        //         .collect::<Vec<_>>()
+        //     {
+        //         // print!("{} -> ", self.get_symbol(sym));
+        //         let mut set = HashSet::<Option<Token>>::new();
+        //         for i in 0..rule.len() {
+        //             // print!("{}: {}, ", self.get_grammar_symbol(rule[i]), rule[i] == GrammarSymbol::Symbol(v));
+        //             if rule[i] == GrammarSymbol::Symbol(v) {
+        //                 set.extend(self.first(&rule[i + 1..]).as_ref())
+        //             }
+        //             // self.print_set(&f);
+        //         }
+        //         // println!();
 
-                if set.contains(&None) {
-                    f.extend(self.follow(sym).as_ref().iter().copied());
-                }
-                f.extend(set.into_iter().flatten().map(Some));
-            }
+        //         if set.contains(&None) {
+        //             f.extend(self.follow(sym).as_ref().iter().copied());
+        //         }
+        //         f.extend(set.into_iter().flatten().map(Some));
+        //     }
+        // }
+
+        // // println!();
+
+        // self.follows.insert(v, f.clone());
+        // Cow::Owned(f)
+    }
+
+    pub fn follows(&mut self) {
+        // Initialize all sets to an empty set
+        for symbol in 0..self.symbols.len() {
+            let symbol = Symbol(symbol);
+            self.follows.entry(symbol).or_default();
         }
 
-        // println!();
+        let mut follows = self.follows.clone();
 
-        self.follows.insert(v, f.clone());
-        Cow::Owned(f)
+        let mut oldsets = None;
+        while Some(&follows) != oldsets.as_ref() {
+            oldsets = Some(follows.clone());
+            for rule in &self.rules {
+                for i in 0..rule.tokens.len() {
+                    if let GrammarSymbol::Symbol(b) = rule.tokens[i] {
+                        let mut f = self.first_non_mut(&rule.tokens[(i + 1)..]);
+                        if f.contains(&None) {
+                            f.remove(&None);
+                            let follows_a = follows.get(&rule.symbol).unwrap().clone();
+                            follows.get_mut(&b).unwrap().extend(follows_a);
+                        }
+                        follows.get_mut(&b).unwrap().extend(f);
+                    }
+                }
+            }
+        }
+        self.follows = follows;
     }
 
     pub fn print(&mut self) {
@@ -274,6 +336,8 @@ impl Grammar {
                 print!("R{{{}}}", self.get_semantic(red))
             }
             println!();
+            // println!("SYMBOLS: {:?}", rule.tokens);
+            // println!("SEMANTICS: {:?}", rule.semantics);
         }
         println!();
         println!("Tokens:");

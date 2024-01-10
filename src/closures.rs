@@ -259,7 +259,9 @@ impl Automata {
                                 }
                             }
                         }
-                    }else if let Some(x) = item.current_sem() {
+                    }
+                    // eprintln!("{}: {:?}", item.to_string(grammar), item.current_sem().map(|s| grammar.get_semantic(s)));
+                    if let Some(x) = item.current_sem() {
                         let state = states.get_mut(&next_state).unwrap().state;
                         if let Some(GrammarSymbol::Symbol(s)) = item.current_gram_sym() {
                             eprintln!("Semantic after non terminal symbol: {} @ state i{state} with prev symbol {}", grammar.get_semantic(x), grammar.get_symbol(s));
@@ -270,7 +272,6 @@ impl Automata {
                             }
                         }
                     }
-					
 				}
 
 				// states.get_mut(&next_state).unwrap().semantic_action = sem_action;
@@ -364,5 +365,13 @@ impl Automata {
 
     pub fn iter_reduce_sem(&self) -> impl Iterator<Item = (usize, Semantic)> + '_ {
         self.reduce_semantics.iter().map(|(&a, &b)| (a, b))
+    }
+
+    pub fn get_state_sem(&self, state: usize) -> Option<Semantic> {
+        self.state_semantics.get(&state).copied()
+    }
+
+    pub fn get_reduce_sem(&self, state: usize) -> Option<Semantic> {
+        self.reduce_semantics.get(&state).copied()
     }
 }
