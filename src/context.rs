@@ -39,7 +39,7 @@ pub struct SemReduceCaseContext {
 pub struct SemBodyContext<'a> {
     pub semantic: Semantic,
     pub semantic_name: &'a str,
-    pub semantic_body: &'a str,
+    pub semantic_body: String,
 }
 
 #[derive(Debug, serde::Serialize)]

@@ -56,8 +56,24 @@ pub struct Config {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
+pub enum SingleOrMultiLineString {
+    Single(String),
+    Multiline(Vec<String>)
+}
+
+impl ToString for SingleOrMultiLineString {
+    fn to_string(&self) -> String {
+        match self {
+            SingleOrMultiLineString::Single(s) => s.to_string(),
+            SingleOrMultiLineString::Multiline(v) => v.join("\n"),
+        }
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
 pub struct SemanticsConfig {
     pub reduce_template: SemanticTemplateSource,
     pub state_template: SemanticTemplateSource,
-    pub replacements: HashMap<String, String>,
+    pub replacements: HashMap<String, SingleOrMultiLineString>,
 }

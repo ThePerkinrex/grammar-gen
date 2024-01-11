@@ -317,15 +317,16 @@ fn main() {
             |&state| SemStateCaseContext { state },
             |sem| {
                 let semantic_name = grammar.get_semantic(sem);
+                let body = config
+                    .semantics
+                    .replacements
+                    .get(semantic_name)
+                    .map(ToString::to_string)
+                    .unwrap_or_default();
                 SemBodyContext {
                     semantic: sem,
                     semantic_name,
-                    semantic_body: config
-                        .semantics
-                        .replacements
-                        .get(semantic_name)
-                        .map(AsRef::as_ref)
-                        .unwrap_or_default(),
+                    semantic_body: body,
                 }
             },
             &mut render,
@@ -373,15 +374,16 @@ fn main() {
             |&ruleno| SemReduceCaseContext { ruleno },
             |sem| {
                 let semantic_name = grammar.get_semantic(sem);
+                let body = config
+                    .semantics
+                    .replacements
+                    .get(semantic_name)
+                    .map(ToString::to_string)
+                    .unwrap_or_default();
                 SemBodyContext {
                     semantic: sem,
                     semantic_name,
-                    semantic_body: config
-                        .semantics
-                        .replacements
-                        .get(semantic_name)
-                        .map(AsRef::as_ref)
-                        .unwrap_or_default(),
+                    semantic_body: body,
                 }
             },
             &mut render,
