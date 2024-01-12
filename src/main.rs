@@ -15,7 +15,7 @@ use context::{
     SemStateCaseContext, ShiftContext,
 };
 use grammar::{Semantic, Token};
-use tinytemplate::TinyTemplate;
+use tinytemplate::{TinyTemplate, format_unescaped};
 use typed_arena::Arena;
 
 use crate::grammar::Grammar;
@@ -136,6 +136,7 @@ fn main() {
     automata.print(&grammar);
     let arena = Arena::new();
     let mut tt = TinyTemplate::new();
+    tt.set_default_formatter(&format_unescaped);
     let reduce_template = config.reduce_template.load_string();
     tt.add_template("reduce", &reduce_template)
         .expect("Valid reduce template");

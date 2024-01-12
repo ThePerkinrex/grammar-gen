@@ -65,8 +65,8 @@ pub enum SingleOrMultiLineString {
 impl ToString for SingleOrMultiLineString {
     fn to_string(&self) -> String {
         match self {
-            SingleOrMultiLineString::Single(s) => s.to_string(),
-            SingleOrMultiLineString::Multiline(v) => v.join("\n"),
+            Self::Single(s) => s.to_string(),
+            Self::Multiline(v) => v.join("\n"),
         }
     }
 }
